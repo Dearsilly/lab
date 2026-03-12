@@ -2,13 +2,13 @@ __pycache__/
 *.pyc
 
 .venv/
-env/
+
 
 models/
 *.pt
 *.bin
 
-data/
+
 
 .idea/
 .vscode/
