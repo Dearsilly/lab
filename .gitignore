@@ -11,11 +11,10 @@ venv/
 env/
 
 # Model weights (large binary files)
-models/*.pt
-models/en_bert/
-models/en_roberta/
-models/zh_bert/
-models/en_deberta/
+*.pt
+*.bin
+models/
+Android_HomeworkScore/app/src/main/assets/*.pt
 
 # Data
 data/raw/
