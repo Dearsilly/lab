@@ -1,0 +1,9 @@
+# ASAP Dataset Configuration
+data:
+  raw_path: "data/raw/asap/"
+  processed_path: "data/processed/"
+  dataset_name: "asap"
+  max_length: 512
+  test_size: 0.2
+  val_size: 0.1
+  random_seed: 42
