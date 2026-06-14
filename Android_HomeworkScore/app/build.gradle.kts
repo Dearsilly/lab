@@ -60,12 +60,6 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0") // OkHttp底层客户端（Retrofit依赖）
     implementation("com.google.code.gson:gson:2.10.1") // Gson JSON解析
 
-    // ===================== Compose Navigation =====================
-    implementation(libs.androidx.navigation.compose)
-
-    // ===================== PyTorch Mobile =====================
-    implementation(libs.pytorch.android)
-
     // ===================== 协程依赖（异步请求） =====================
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
