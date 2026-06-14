@@ -10,7 +10,8 @@
 - 多维度评分输出（总分 + 内容/结构/语言）
 - 智能评语反馈（中英文模板）
 - 批量评分（CSV）
-- Web 可视化界面
+- Web 可视化界面（Streamlit）
+- Android 本地推理版（PyTorch Mobile，离线可用）
 
 ### 1.2 运行环境
 
@@ -279,3 +280,81 @@ python tests/test_e2e.py  # E2E 测试
 2. **维度评分非真正多任务**：当前维度分通过启发式拆分得到
 3. **512 token 限制**：超长作文会被截断
 4. **DeBERTa-v3 兼容性**：当前 transformers 版本下训练不稳定
+5. **Android 模型体积**：双模型 ~800MB，APK 体积过大，需优化为首次启动下载
+
+---
+
+## 11. Android App 架构
+
+Android 版与 Web 版共享模型权重，但推理在手机本地执行，不依赖服务器。
+
+### 11.1 系统架构
+
+```
+┌──────────────────────────────────────────────────┐
+│              Jetpack Compose UI                   │
+│  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐         │
+│  │ 评分  │  │ 批量  │  │ 对比  │  │ 设置  │         │
+│  │Tab   │  │Tab   │  │Tab   │  │Tab   │         │
+│  └──────┘  └──────┘  └──────┘  └──────┘         │
+│  Material3 NavigationBar                         │
+└──────────────────────┬───────────────────────────┘
+                       │
+┌──────────────────────▼───────────────────────────┐
+│            推理引擎 (inference/)                   │
+│                                                   │
+│  AESPredictor.predict(text, language)            │
+│    │                                              │
+│    ├─ LanguageDetector (字符规则，零依赖)          │
+│    ├─ BertTokenizer (Kotlin WordPiece 实现)       │
+│    ├─ PyTorch Mobile 模型加载 (.pt from assets)    │
+│    └─ 反馈生成 (中文模板，同 Python 版)            │
+│                                                   │
+│  依赖: org.pytorch:pytorch_android_lite:1.13.1   │
+└──────────────────────┬───────────────────────────┘
+                       │
+┌──────────────────────▼───────────────────────────┐
+│                 assets/ (本地文件)                 │
+│  bert_model.pt (英文, 418MB)                     │
+│  zh_model.pt   (中文, 391MB)                     │
+│  vocab.txt     (英文词表, 30522 tokens)           │
+│  zh_vocab.txt  (中文词表, 21128 tokens)           │
+└──────────────────────────────────────────────────┘
+```
+
+### 11.2 与 Web 版的对比
+
+| 维度 | Web 版 | Android 版 |
+|------|--------|-----------|
+| 推理位置 | Flask 服务器 (GPU) | 手机本地 (CPU) |
+| 模型加载 | Python PyTorch | PyTorch Mobile Lite |
+| 分词器 | HuggingFace Transformers | Kotlin 自实现 WordPiece |
+| 语言检测 | langdetect + 字符规则 | 字符规则（零依赖） |
+| UI 框架 | Streamlit + Plotly | Jetpack Compose + Canvas |
+| 网络依赖 | 需要 HTTP 连接 | 完全离线 |
+| 推理速度 | ~200ms (fp16 GPU) | ~1-5s (CPU) |
+
+### 11.3 分词器实现
+
+Android 版分词器约 100 行 Kotlin 代码，不依赖任何 Java NLP 库：
+
+```
+输入文本
+  → basicTokenize(): 按空格/标点分词，中文逐字切分
+  → wordPieceTokenize(): 贪心最长子词匹配，##前缀标记
+  → [CLS] + tokens + [SEP] → LongArray(512)
+```
+
+词表从 assets/vocab.txt 读取（每行一个 token），构建 HashMap<String, Int>。中文检测通过 Unicode 范围 `一-鿿` 统计中文字符占比。
+
+### 11.4 技术栈
+
+| 层级 | 技术 |
+|------|------|
+| UI | Jetpack Compose + Material3 |
+| 导航 | Compose Navigation (Bottom Bar) |
+| 推理 | PyTorch Mobile Lite 1.13.1 |
+| 图表 | Compose Canvas 自绘雷达图 |
+| 异步 | Kotlin Coroutines |
+| 最低 SDK | 29 (Android 10) |
+| 语言 | Kotlin |
