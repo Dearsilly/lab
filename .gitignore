@@ -1,17 +1,44 @@
+# Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*.egg-info/
+dist/
+build/
 
-.venv/
-
+# Virtual environment
 venv/
+.venv/
 env/
 
+# Model weights (large binary files)
 models/
 *.pt
 *.bin
 
-.idea/
+# Data
+data/raw/
+data/processed/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
 .vscode/
-venv/Scripts/python.exe
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+*.Zone.Identifier
+
+# Code agent config
+.claude/
+
+# Jupyter
+notebooks/.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Streamlit
+.streamlit/secrets.toml
