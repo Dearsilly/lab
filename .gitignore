@@ -11,10 +11,9 @@ venv/
 env/
 
 # Model weights (large binary files)
+models/
 *.pt
 *.bin
-models/
-Android_HomeworkScore/app/src/main/assets/*.pt
 
 # Data
 data/raw/
@@ -43,4 +42,3 @@ notebooks/.ipynb_checkpoints/
 
 # Streamlit
 .streamlit/secrets.toml
-.superpowers/
