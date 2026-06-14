@@ -1,142 +1,204 @@
-# 项目介绍：
-### 1.数据集保存在data/aspa文件目录下，training_set_rel3.tsv是基础数据集，valid_set.tsv是基础数据验证集。
-### 2.几个重要的py文件及执行顺序：
-```
-data_preprocess.py用作数据预处理->
-train_model.py在数据与处理的基础上初步训练模型，调用GPU加速（不同的电脑需要根据自己的配置安装GPU，修改相应的代码）->
-train_high_score.py是对前者的补充，因为基础数据集包括八个set，每个set的评分标准不一样、满分也不一样（可以自己打开tsv文件查看一下），所以我们提取数据集中的第八组（用的是extract_high_score_essays.py）（这一组集合满分是60）（也可以用分数占满分的比值来进行训练，但效果不是很好，有待进一步优化）->
-infer_score.py是最终评分文件，将要评分的作文粘贴到该文件中的main函数下的test_essay参数中，执行就可以得到模型的评分输出
-```
-### 3.建议在项目根目录下使用虚拟环境venv
+# 自动文本评分系统 (AES)
 
-### 4.其他的py脚本大部分做测试用，不是重点
+基于 BERT 深度学习的**中英文双语**作文自动评分系统，学校工程实践项目。
 
-### 5.git的使用：
-```
-每次开始前先fetch比较差异（pull会直接覆盖本地，不显示差异，慎用）
-结束时push到git仓库，如果不push别人不知道你的更改；push时有问题谨慎处理，不然会污染仓库
-commit时尽量描述清楚行为，包括做了什么、修改了什么、新增了什么、有什么功能等，越详细越好
-```
-```angular2html
-txy 10.27
-```
-## 10.30补充
-## 环境配置指南
-### 1. 虚拟环境搭建
-```
-1. 创建虚拟环境（项目根目录下）
-python -m venv .venv
+## 功能特性
 
-2. 激活虚拟环境（Windows PowerShell）
-.venv\Scripts\activate
+- **中英文双语评分**: 自动检测或手动切换语言，英文 BERT-base + 中文 BERT-base-chinese 双模型
+- **多维度评分**: 总评分 + 内容/结构/语言三维度打分 + 雷达图可视化
+- **智能反馈**: 基于维度分数的中英文模板化评语反馈
+- **批量评分**: 上传 CSV 文件，批量评分并下载结果
+- **中英对比**: 同一文本中英文模型分别评分，对比展示
+- **双语界面**: 完整中英文界面切换
+- **模型信息**: 实时查看各模型加载状态
 
-#若激活失败，尝试执行以下命令后重新激活（解决权限问题）
-Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-### 2. 安装依赖包
-```
-1. 先更新pip
-python.exe -m pip install --upgrade pip
+## 环境要求
 
-2. 安装项目核心依赖（确保requirements.txt已生成）
-pip install -r requirements.txt
+- Python 3.10+
+- PyTorch 2.0+ (CUDA 推荐)
+- RTX 5060 / 8GB 显存
+- 约 6GB 磁盘空间（模型权重）
 
-3. 安装PyTorch（CUDA 11.7版本，适配NVIDIA 2060等显卡）
-pip install torch==1.13.1+cu117 --extra-index-url https://download.pytorch.org/whl/cu117
+## 安装
 
-4. 下载spaCy英文模型（必须单独执行）
-python -m spacy download en_core_web_sm
-```
-### 3. 环境验证
-```
-1. 验证核心库是否安装成功
-python test_all_libs.py
+```bash
+# conda 环境（推荐）
+conda create -n pytorch python=3.10
+conda activate pytorch
 
-2. 验证GPU是否可用（需安装PyTorch后执行）
-python test_gpu.py
-
-#若输出均为 ✅ 则环境正常；若出现 ❌ 错误，根据提示修复对应库的安装。
+# 安装依赖
+pip install torch transformers datasets scikit-learn pandas flask flask-cors streamlit accelerate pyyaml plotly langdetect jieba deep-translator
 ```
 
+## 项目结构
 
-
-# 完整操作流程
-## 1. 数据预处理
-### 处理原始数据，生成训练/验证集（仅需执行一次）
 ```
-python data_preprocess.py
-```
-输出文件：data/asap/train_cleaned_essay8.csv（训练集）、
-data/asap/valid_cleaned_essay8.csv（验证集）、
-data/asap/train_high_score_essay8.csv（高分样本集）
-若提示缺少数据集，请确认 data/asap/training_set_rel3.tsv 已存在。
-
-## 2. 模型训练
-### 第一步：基础模型训练（使用全部样本）
-```
-python train_model.py
-```
-
-### 第二步：高分样本精调（基于基础模型优化）
-```
-python train_high_score.py
-```
-模型保存路径：saved_model/bert_asap_essay8（基础模型）、saved_model/bert_asap_essay8_high_score（精调模型）
-训练过程日志保存在 logs_regression 目录，可通过 TensorBoard 查看：tensorboard --logdir=logs_regression
-
-### 第三步：作文评分（推理）
-```
-运行评分脚本，输出预测分数
-python infer_score.py
-```
-如需评分新作文，修改 infer_score.py 中 test_essay 变量的文本内容即可。
-评分范围：10-60 分（与第八组数据集满分一致）。
-
-
-# 项目结构说明
-#### ├── data/asap/ # 数据集目录（原始数据 + 预处理后数据）
-#### ├── saved_model/ # 训练好的模型保存目录
-#### ├── logs_regression/ # 训练日志
-#### ├── requirements.txt # 依赖清单
-#### ├── data_preprocess.py # 数据预处理
-#### ├── train_model.py # 基础模型训练
-#### ├── train_high_score.py # 高分样本精调
-#### ├── infer_score.py # 作文评分（推理）
-#### └── 各类测试脚本（test_*.py） # 环境验证、功能测试
-```angular2html
-txy 10.30
+gcsj/
+├── data/
+│   ├── raw/asap/                  # ASAP 英文原始数据（12,979 篇）
+│   └── raw/chinese/               # 中文翻译数据（3,950 篇）
+├── models/
+│   ├── best_model.pt              # 英文 BERT-base 模型
+│   ├── en_roberta/                # 英文 RoBERTa-base 模型
+│   ├── en_bert/                   # 英文 BERT-base 备份
+│   └── zh_bert/                   # 中文 BERT-base-chinese 模型
+├── configs/                       # 配置文件（数据/模型/API）
+├── src/
+│   ├── data_preprocessing/        # 数据加载、清洗、分词、划分
+│   ├── models/                    # 模型定义（AESModel / 多任务 / 中文）
+│   ├── training/                  # 训练器（BERT / 进阶 / 中文）
+│   ├── evaluation/                # QWK、MAE、Pearson 评估指标
+│   ├── inference/                 # 推理引擎、模型加载、中文预处理
+│   └── utils/                     # 语言检测、模型注册表、配置加载
+├── api/app.py                     # Flask REST API
+├── ui/
+│   ├── app.py                     # Streamlit 主页（评分）
+│   ├── pages/                     # 批量评分、中英对比
+│   ├── components/                # 雷达图、反馈卡片
+│   └── i18n/                      # 中英双语文案
+├── scripts/                       # 训练/翻译脚本
+├── samples/                       # 范文（中英文各一篇）
+├── tests/                         # 单元测试 + E2E 测试
+└── notebooks/                     # 数据探索与实验
 ```
 
-## 环境配置
-### 1.所有人执行
+## 数据集
 
-#### (1)创建虚拟环境（项目根目录下）
-```python -m venv .venv``` 
+### 英文：ASAP (Automated Student Assessment Prize)
+- 12,976 篇英文作文，8 个评分集（不同题目/学段）
+- 分数范围 0-55，按 essay_set 归一化至 [0, 1]
+- 按 essay_set 隔离划分训练/验证/测试集（防止数据泄露）
 
-#### (2) 激活虚拟环境
-```angular2html
-.venv\Scripts\activate
+### 中文：ASAP 翻译版
+- 3,950 篇，Google 翻译英→中，保留原始评分标签
+- 分层采样，覆盖全部 8 个题目集
+- 按 essay_set 归一化，随机划分训练/验证/测试集
+
+## 模型
+
+| 模型 | 数据 | Val QWK | Test QWK | 大小 |
+|------|------|---------|----------|------|
+| BERT-base-uncased (英文) | ASAP 12,976 | 0.58 | — | 418 MB |
+| RoBERTa-base (英文备选) | ASAP 12,976 | 0.58 | — | 499 MB |
+| BERT-base-chinese (中文) | 翻译 3,950 | 0.79 | 0.76 | 391 MB |
+
+> QWK (Quadratic Weighted Kappa) 取值范围 [-1, 1]，越高越好。当前使用严格的 prompt 隔离评估，跨题目泛化的 QWK 约 0.55-0.60 为合理水平。
+
+## 训练
+
+```bash
+# 英文模型
+python -m src.training.trainer --model_name bert-base-uncased --batch_size 16 --epochs 5 --fp16
+
+# RoBERTa 模型
+python -m src.training.trainer --model_name roberta-base --batch_size 8 --epochs 5 --fp16
+
+# 中文模型（需先翻译数据）
+python -m src.training.cn_trainer --data_path data/raw/chinese/asap_zh.csv --batch_size 8 --epochs 5
 ```
 
-#### (3) 安装项目核心依赖 (注：我用的是python3.10，建议用python3.10版本相近的，如python3.10，如若安装时报错，建议切换与python3.10接近的版本)
-```pip install -r env/requirements_new.txt```
+### 翻译中文数据
+```bash
+python scripts/translate_data.py --max-samples 4000
+```
 
-### 2.5060主机另外执行
-```pip install -r env/requirements_gpu5060.txt```
+## 启动服务
 
-### 3.环境检查
-####  检查Python依赖
-```python env/check_env.py```
+**终端 1 — 启动 API：**
+```bash
+python api/app.py
+# API: http://localhost:5000
+```
 
-#### 检查GPU（5060主机检查）
-```python env/check_gpu.py```
+**终端 2 — 启动 UI：**
+```bash
+streamlit run ui/app.py
+# UI: http://localhost:8501
+```
 
-### 4.训练
-```python -m src.train```
-## 数据说明
+## API 文档
 
-```data/asap/asap_split_sets```中的文件为```training_set_rel3.tsv```按照```essay_set(1-8)```分为的8个文件
-(貌似并没有什么用)
+所有响应格式：`{"success": bool, ...}`。错误时 `success=false` 且包含 `error` 字段。
 
-```wjk(25.3.12)```
+### `GET /api/v1/health`
+```json
+{"status": "ok", "en_model_loaded": true, "cn_model_loaded": true}
+```
 
+### `GET /api/v1/models`
+```json
+{"success": true, "models": {"en": {...}, "zh": {...}}}
+```
+
+### `POST /api/v1/score`
+**请求：**
+```json
+{"text": "作文内容...", "language": "auto"}
+```
+`language` 可选 `"auto"` / `"en"` / `"zh"`。
+
+**响应：**
+```json
+{
+  "success": true,
+  "score": 0.82,
+  "scores": {"total": 0.82, "content": 0.80, "structure": 0.85, "language": 0.81},
+  "feedback": {
+    "content": "论点清晰...",
+    "structure": "结构完整...",
+    "language": "语言流畅...",
+    "overall": "总分表现优秀..."
+  },
+  "language": "zh",
+  "elapsed_ms": 1234
+}
+```
+
+### `POST /api/v1/batch`
+上传 CSV 文件（列：`essay_id, text, language`），返回批量评分结果。
+```json
+{"success": true, "total": 50, "results": [...]}
+```
+
+## 测试
+
+```bash
+# 单元测试
+python3 -m pytest tests/ -v
+
+# E2E 端到端测试
+python3 tests/test_e2e.py
+```
+
+## 评估指标
+
+| 指标 | 说明 |
+|------|------|
+| QWK | 二次加权 Kappa，衡量人机评分一致性，主要指标 |
+| MAE | 平均绝对误差 |
+| Pearson r | Pearson 相关系数 |
+
+## 技术栈
+
+| 层级 | 技术 |
+|------|------|
+| 模型 | BERT-base-uncased / BERT-base-chinese / RoBERTa-base |
+| 损失函数 | MSE |
+| 训练优化 | fp16 混合精度、早停 patience=3、梯度裁剪 |
+| 中文分词 | jieba |
+| 语言检测 | langdetect |
+| 后端 | Flask + Flask-CORS |
+| 前端 | Streamlit + Plotly |
+| 翻译 | deep-translator (Google Translate) |
+| 测试 | pytest + Playwright |
+
+## 限制与后续改进
+
+- 中文模型基于翻译数据训练，自然中文评分能力有限——可收集真实中文作文数据提升
+- 英文模型 QWK 受严格 prompt 隔离评估影响偏低——可尝试 DeBERTa-v3 或模型集成
+- 维度评分基于启发式拆分（非真实多任务模型）——可训练多任务版本来替代
+- 不支持超长文本（>512 token）——可引入 Longformer 或分块策略
+
+## 团队
+
+4 人工程实践项目 · 苏州 · 2026
