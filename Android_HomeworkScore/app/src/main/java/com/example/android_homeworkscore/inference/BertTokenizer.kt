@@ -37,15 +37,15 @@ class BertTokenizer(private val context: Context, vocabAsset: String = "vocab.tx
         val words = basicTokenize(text.lowercase())
         for (word in words) {
             if (word.isEmpty()) continue
-            val subTokens = wordPieceTokenize(word)
+            val remaining = maxLength - 1 - tokens.size // reserve space for [SEP]
+            if (remaining <= 0) break
+            val subTokens = wordPieceTokenize(word).take(remaining)
             tokens.addAll(subTokens)
-            if (tokens.size >= maxLength - 1) break
         }
 
         tokens.add(sepTokenId)
 
         val result = LongArray(maxLength) { padTokenId.toLong() }
-        val attentionMask = IntArray(maxLength) { 0 }
         for (i in tokens.indices) {
             if (i >= maxLength) break
             result[i] = tokens[i].toLong()
