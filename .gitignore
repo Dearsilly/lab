@@ -49,3 +49,8 @@ notebooks/.ipynb_checkpoints/
 # Streamlit
 .streamlit/secrets.toml
 .superpowers/
+chunked_download.py
+download_model.py
+generate_android_models.py
+train_and_export.py
+train_en_model.py

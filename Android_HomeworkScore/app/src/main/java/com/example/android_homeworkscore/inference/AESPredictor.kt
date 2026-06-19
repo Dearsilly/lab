@@ -1,6 +1,7 @@
 package com.example.android_homeworkscore.inference
 
 import android.content.Context
+import android.util.Log
 import org.pytorch.Module
 import org.pytorch.Tensor
 import java.io.File
@@ -23,26 +24,54 @@ class AESPredictor(private val context: Context) {
     private var cnTokenizer: BertTokenizer? = null
     private var enLoaded = false
     private var cnLoaded = false
+    private var enError: String? = null
+    private var cnError: String? = null
 
     fun isEnLoaded(): Boolean = enLoaded
     fun isCnLoaded(): Boolean = cnLoaded
+    fun getEnError(): String? = enError
+    fun getCnError(): String? = cnError
+
+    /**
+     * Check if a specific language model is available.
+     * @return true if the model for this language can be used for scoring.
+     */
+    fun canScore(language: String): Boolean {
+        return when (language) {
+            "zh" -> cnLoaded && cnModel != null && cnTokenizer != null
+            else -> enLoaded && enModel != null && enTokenizer != null
+        }
+    }
 
     fun loadModels() {
         try {
+            Log.d("AESPredictor", "Loading English tokenizer...")
             enTokenizer = BertTokenizer(context, "vocab.txt")
+            Log.d("AESPredictor", "Copying English model from assets...")
             val enModelFile = copyAssetToFile("bert_model.pt")
+            Log.d("AESPredictor", "Model file size: ${enModelFile.length()} bytes")
+            Log.d("AESPredictor", "Loading English model with PyTorch...")
             enModel = Module.load(enModelFile.absolutePath)
             enLoaded = true
+            Log.d("AESPredictor", "English model loaded successfully!")
         } catch (e: Exception) {
+            Log.e("AESPredictor", "Failed to load English model: ${e.javaClass.simpleName}: ${e.message}", e)
+            enError = "${e.javaClass.simpleName}: ${e.message}"
             enLoaded = false
         }
 
         try {
+            Log.d("AESPredictor", "Loading Chinese tokenizer...")
             cnTokenizer = BertTokenizer(context, "zh_vocab.txt")
+            Log.d("AESPredictor", "Copying Chinese model from assets...")
             val cnModelFile = copyAssetToFile("zh_model.pt")
+            Log.d("AESPredictor", "Loading Chinese model with PyTorch...")
             cnModel = Module.load(cnModelFile.absolutePath)
             cnLoaded = true
+            Log.d("AESPredictor", "Chinese model loaded successfully!")
         } catch (e: Exception) {
+            Log.e("AESPredictor", "Failed to load Chinese model: ${e.javaClass.simpleName}: ${e.message}", e)
+            cnError = "${e.javaClass.simpleName}: ${e.message}"
             cnLoaded = false
         }
     }
@@ -50,10 +79,17 @@ class AESPredictor(private val context: Context) {
     private fun copyAssetToFile(assetName: String): File {
         val file = File(context.filesDir, assetName)
         if (!file.exists()) {
-            context.assets.open(assetName).use { input ->
-                FileOutputStream(file).use { output ->
-                    input.copyTo(output)
+            val tmp = File(context.filesDir, "$assetName.tmp")
+            try {
+                context.assets.open(assetName).use { input ->
+                    FileOutputStream(tmp).use { output ->
+                        input.copyTo(output)
+                    }
                 }
+                tmp.renameTo(file)
+            } catch (e: Exception) {
+                tmp.delete()  // Clean up partial file
+                throw e
             }
         }
         return file
@@ -63,17 +99,23 @@ class AESPredictor(private val context: Context) {
         val start = System.currentTimeMillis()
         val detectedLang = if (language == "auto") LanguageDetector.detect(text) else language
 
-        val (model, tokenizer) = when (detectedLang) {
+        val (model, tokenizer, usedLang) = when (detectedLang) {
             "zh" -> {
-                if (cnLoaded && cnModel != null && cnTokenizer != null)
-                    Pair(cnModel!!, cnTokenizer!!)
-                else if (enLoaded && enModel != null && enTokenizer != null)
-                    Pair(enModel!!, enTokenizer!!)
-                else throw IllegalStateException("No model loaded")
+                if (cnLoaded && cnModel != null && cnTokenizer != null) {
+                    Triple(cnModel!!, cnTokenizer!!, "zh")
+                } else if (language == "zh") {
+                    // User explicitly chose Chinese but model not available
+                    throw IllegalStateException("中文模型尚未加载，暂不支持中文作文评分。请等待中文模型训练完成后使用。")
+                } else if (enLoaded && enModel != null && enTokenizer != null) {
+                    // Auto-detected Chinese but using English model as fallback
+                    Triple(enModel!!, enTokenizer!!, "en-fallback")
+                } else {
+                    throw IllegalStateException("No model loaded")
+                }
             }
             else -> {
                 if (enLoaded && enModel != null && enTokenizer != null)
-                    Pair(enModel!!, enTokenizer!!)
+                    Triple(enModel!!, enTokenizer!!, "en")
                 else throw IllegalStateException("English model not loaded")
             }
         }
@@ -93,7 +135,7 @@ class AESPredictor(private val context: Context) {
             "structure" to structure.toDouble(),
             "language" to lang.toDouble()
         )
-        val feedback = generateFeedback(scores, detectedLang)
+        val feedback = generateFeedback(scores, usedLang)
         val elapsed = System.currentTimeMillis() - start
 
         return ScoreResult(

@@ -16,9 +16,9 @@ fun SettingsScreen(predictor: AESPredictor) {
         Text("模型状态", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(12.dp))
 
-        ModelStatusCard("英文模型 (BERT-base-uncased)", predictor.isEnLoaded())
+        ModelStatusCard("英文模型 (BERT-base-uncased)", predictor.isEnLoaded(), predictor.getEnError())
         Spacer(modifier = Modifier.height(8.dp))
-        ModelStatusCard("中文模型 (BERT-base-chinese)", predictor.isCnLoaded())
+        ModelStatusCard("中文模型 (BERT-base-chinese)", predictor.isCnLoaded(), predictor.getCnError())
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -41,23 +41,34 @@ fun SettingsScreen(predictor: AESPredictor) {
 }
 
 @Composable
-fun ModelStatusCard(name: String, loaded: Boolean) {
+fun ModelStatusCard(name: String, loaded: Boolean, error: String? = null) {
     Card(
         colors = CardDefaults.cardColors(
             containerColor = if (loaded) Color(0xFFF0FDF4) else Color(0xFFFEF2F2)
         )
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(name, style = MaterialTheme.typography.bodyMedium)
-            Text(
-                if (loaded) "已加载" else "未加载",
-                color = if (loaded) Color(0xFF16A34A) else Color(0xFFDC2626),
-                fontWeight = FontWeight.Medium
-            )
+        Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(name, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    if (loaded) "已加载" else "未加载",
+                    color = if (loaded) Color(0xFF16A34A) else Color(0xFFDC2626),
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            if (!loaded && error != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "错误: $error",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF991B1B),
+                    maxLines = 4
+                )
+            }
         }
     }
 }

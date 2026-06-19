@@ -1,5 +1,8 @@
 pluginManagement {
     repositories {
+        // Tencent mirrors for China access
+        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
+        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/gradle-plugins/") }
         google {
             content {
                 includeGroupByRegex("com\\.android.*")
@@ -17,6 +20,8 @@ plugins {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        // Tencent mirrors for China access
+        maven { url = uri("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/") }
         google()
         mavenCentral()
     }

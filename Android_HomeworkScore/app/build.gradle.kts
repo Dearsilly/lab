@@ -11,6 +11,8 @@ android {
         }
     }
 
+    buildToolsVersion = "36.1.0"
+
     defaultConfig {
         applicationId = "com.example.android_homeworkscore"
         minSdk = 29
@@ -19,6 +21,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
     }
 
     buildTypes {
@@ -28,6 +34,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+    }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
         }
     }
 
@@ -59,6 +71,12 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.9.0") // Retrofit Gson解析器
     implementation("com.squareup.okhttp3:okhttp:4.12.0") // OkHttp底层客户端（Retrofit依赖）
     implementation("com.google.code.gson:gson:2.10.1") // Gson JSON解析
+
+    // ===================== PyTorch Mobile 本地推理 =====================
+    implementation(libs.pytorch.android.lite)
+
+    // ===================== Compose 导航 =====================
+    implementation(libs.androidx.navigation.compose)
 
     // ===================== 协程依赖（异步请求） =====================
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
