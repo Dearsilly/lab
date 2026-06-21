@@ -41,8 +41,19 @@ fun CompareScreen(predictor: AESPredictor) {
             onClick = {
                 isLoading = true
                 scope.launch(Dispatchers.Default) {
-                    enResult = predictor.predict(inputText, "en")
-                    cnResult = predictor.predict(inputText, "zh")
+                    try {
+                        enResult = predictor.predict(inputText, "en")
+                    } catch (e: Exception) {
+                        enResult = null
+                    }
+                    // Only attempt Chinese if model is available
+                    if (predictor.canScore("zh")) {
+                        try {
+                            cnResult = predictor.predict(inputText, "zh")
+                        } catch (e: Exception) {
+                            cnResult = null
+                        }
+                    }
                     isLoading = false
                 }
             },
